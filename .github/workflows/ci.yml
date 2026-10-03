@@ -17,6 +17,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # Next genera next-env.d.ts y los tipos de rutas; sin esto tsc no los encuentra.
+      - run: npx next typegen
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
