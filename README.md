@@ -68,3 +68,9 @@ Ver [`AGENTS.md`](AGENTS.md) para las convenciones y [`docs/decisions.md`](docs/
 - **Preview por PR:** Vercel genera una URL por pull request.
 - **Producción:** al mergear a `main`.
 - Variable de entorno opcional: `YOUTUBE_API_KEY`.
+
+### Ojo con la protección de previews
+
+Por defecto Vercel pide iniciar sesión para abrir los previews (*Deployment Protection*). Como anfitrión podés entrar igual, pero **tus invitados no**: para probar la fiesta con celulares de otras personas, o corrés la app en tu red local (`npm run dev`) o desactivás la protección del proyecto en **Vercel → Project → Settings → Deployment Protection → Vercel Authentication: Disabled**. Los dominios de producción no tienen esa protección.
+
+Cuando el preview queda público, el workflow `Smoke test del preview` lo prueba solo en cada PR.

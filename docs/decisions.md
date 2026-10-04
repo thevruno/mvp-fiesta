@@ -36,3 +36,9 @@ Una línea por decisión, con fecha y motivo. Se agrega al final, sin reescribir
 - **El reproductor nunca se oculta** (mínimo visual 200×200) y no se manda `Referrer-Policy: no-referrer`, por el error 153 de YouTube.
 - **El smoke test llama a las server actions por HTTP**, como el navegador. Verifica el flujo completo y sirve igual contra la URL de preview de Vercel.
 - **Topes del plan aplicados en el servidor**: 40 invitados por fiesta, 3 fiestas en vivo, 3 cartas propuestas por invitado, validación de largo de textos.
+
+## 2026-10-04 — Deploys y verificación online
+
+- **Preview por PR con Vercel**, conectado a la GitHub App de la cuenta (sin tokens compartidos).
+- **El smoke test corre desde GitHub Actions y no desde la máquina de desarrollo**: los sandboxes de trabajo no tienen salida a `*.vercel.app`, y Actions sí. Así cada PR verifica la app deployada de verdad.
+- **Si el preview está protegido por Deployment Protection, el workflow avisa con un warning** en vez de fallar: es una configuración de Vercel, no un bug de la app.
