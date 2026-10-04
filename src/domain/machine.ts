@@ -24,6 +24,7 @@ import {
 } from "./round";
 import {
   START_GRACE_MS,
+  type ActionCard,
   type BlockState,
   type Effect,
   type PartyEvent,
@@ -658,10 +659,11 @@ export function reduce(
     /* ---------------- Cartas ---------------- */
     case "PROPOSE_CARD": {
       const approved = state.settings.autoApproveCards;
-      const card = {
+      // No se pisa el id ni el autor: los pone la capa de datos.
+      const card: ActionCard = {
         ...event.card,
-        origin: "guest" as const,
-        status: approved ? ("approved" as const) : ("pending" as const),
+        origin: "guest",
+        status: approved ? "approved" : "pending",
       };
       return { state: withVersion(state, { cards: [...state.cards, card] }), effects: [] };
     }

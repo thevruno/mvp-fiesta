@@ -69,6 +69,7 @@ export interface ActionCard {
   emoji: string;
   origin: CardOrigin;
   status: CardStatus;
+  /** Apodo del invitado que la propuso (solo para mostrar en la consola). */
   proposedBy: string | null;
 }
 

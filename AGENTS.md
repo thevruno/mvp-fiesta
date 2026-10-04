@@ -44,5 +44,14 @@ CI corre lint + typecheck + tests + build en cada push y PR.
 ## Estado actual
 
 - ✅ Dominio puro con tests (bloques, rondas, votación, transiciones, host caído).
-- ✅ CI y base Next.js + Tailwind.
-- ⏳ Supabase, auth, UI, reproductor de YouTube, QR.
+- ✅ Capa de servidor: store en memoria detrás de `PartyStore`, server actions con Zod, vistas.
+- ✅ UI jugable: consola del anfitrión con reproductor de YouTube, invitados por QR/código, cartas, votación en vivo.
+- ✅ 84 tests (dominio + servidor) y smoke test de punta a punta por HTTP.
+- ⏳ Supabase (persistencia + Realtime + RLS), auth de anfitriones, deploy de previews.
+
+## Cómo está armado hoy
+
+- `src/server/store.ts` guarda las fiestas en memoria detrás de la interfaz `PartyStore` (`src/server/ports.ts`). Es lo único que hay que reemplazar para pasar a Supabase.
+- `src/server/actions.ts` es la única puerta de escritura: valida con Zod, aplica `reduce` del dominio y devuelve vistas (`src/server/views.ts`). Nunca se confía en el cliente.
+- El servidor mantiene el reloj (`tick`): cuando un cliente consulta, avanza las fases cuyo deadline venció. Los invitados pueden empujar una transición vencida si la consola del anfitrión no lo hizo.
+- Las vistas hacen polling cada 1,5 s (`usePoll` en `src/lib/hooks.ts`). Cuando entre Realtime, se cambia ahí y las vistas no se tocan.
