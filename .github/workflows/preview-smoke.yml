@@ -1,0 +1,51 @@
+name: Smoke test del preview
+
+# Corre el smoke test contra la URL de preview que publica Vercel en cada PR.
+# Desde GitHub Actions hay salida a internet, así que se prueba la app igual que
+# la usa un invitado: server actions por HTTP.
+
+on:
+  deployment_status:
+
+jobs:
+  smoke:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # El smoke test necesita los ids de las server actions del build.
+      - run: npm run build
+
+      - name: Verificar el preview
+        env:
+          URL: ${{ github.event.deployment_status.environment_url }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${URL:-}" ]; then
+            echo "::warning::Vercel no informó una URL para este deploy"
+            exit 0
+          fi
+
+          echo "Probando $URL"
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$URL/")
+
+          if [ "$CODE" = "401" ] || [ "$CODE" = "403" ]; then
+            echo "::warning::El preview está protegido (Deployment Protection). Desactivá 'Vercel Authentication' para los previews o agregá un bypass token para poder probarlo automáticamente."
+            exit 0
+          fi
+
+          if [ "$CODE" != "200" ]; then
+            echo "::error::El preview respondió $CODE"
+            exit 1
+          fi
+
+          npm run smoke "$URL"
