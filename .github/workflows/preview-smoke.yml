@@ -28,24 +28,64 @@ jobs:
         env:
           URL: ${{ github.event.deployment_status.environment_url }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          {
+            echo "### Smoke test del preview"
+            echo ""
+            echo "- URL: \`${URL:-<sin URL>}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
           if [ -z "${URL:-}" ]; then
-            echo "::warning::Vercel no informó una URL para este deploy"
+            echo "::warning::Vercel no informó una URL para este deploy."
             exit 0
           fi
 
-          echo "Probando $URL"
-          CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$URL/")
+          # Sin -f a propósito: se quiere ver el código de respuesta.
+          INFO=$(curl -s -o /dev/null -L -m 30 -w "%{http_code} %{url_effective}" "$URL/" 2>&1)
+          CURL_EXIT=$?
+          CODE="${INFO%% *}"
+          FINAL="${INFO#* }"
+
+          echo "- HTTP: \`${CODE:-falló}\` (curl ${CURL_EXIT})" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL final: \`${FINAL}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "curl=$CURL_EXIT code=${CODE:-?} final=${FINAL:-?}"
+
+          if [ "$CURL_EXIT" != "0" ]; then
+            echo "::warning title=Preview inalcanzable::No se pudo conectar a $URL (curl $CURL_EXIT)."
+            exit 0
+          fi
+
+          # Protección de despliegues de Vercel: el preview pide login.
+          case "$FINAL" in
+            *vercel.com/sso*|*vercel.com/login*)
+              echo "::warning title=Preview protegido::El deploy pide autenticación (Deployment Protection). Desactivá 'Vercel Authentication' para los previews para poder probarlo automáticamente."
+              exit 0
+              ;;
+          esac
 
           if [ "$CODE" = "401" ] || [ "$CODE" = "403" ]; then
-            echo "::warning::El preview está protegido (Deployment Protection). Desactivá 'Vercel Authentication' para los previews o agregá un bypass token para poder probarlo automáticamente."
+            echo "::warning title=Preview protegido::El deploy respondió $CODE (Deployment Protection)."
             exit 0
           fi
 
           if [ "$CODE" != "200" ]; then
-            echo "::error::El preview respondió $CODE"
+            echo "::error title=Preview caído::El preview respondió $CODE."
             exit 1
           fi
 
-          npm run smoke "$URL"
+          echo "### Resultado del smoke test" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          set +e
+          npm run smoke "$URL" 2>&1 | tee /tmp/smoke.log
+          SMOKE_EXIT=${PIPESTATUS[0]}
+          set -e
+
+          cat /tmp/smoke.log >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$SMOKE_EXIT" != "0" ]; then
+            DETALLE=$(grep -E "💥|✗" /tmp/smoke.log | head -3 | tr '\n' ' ')
+            echo "::error title=Smoke test falló::${DETALLE:-ver el resumen del job}"
+            exit 1
+          fi
